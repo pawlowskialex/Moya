@@ -3,20 +3,24 @@ import Result
 
 /// Logs network activity (outgoing requests and incoming responses).
 public final class NetworkLoggerPlugin: PluginType {
-    private let loggerId = "Moya_Logger"
-    private let dateFormatString = "dd/MM/yyyy HH:mm:ss"
-    private let dateFormatter = DateFormatter()
+    fileprivate let loggerId = "Moya_Logger"
+    fileprivate let dateFormatString = "dd/MM/yyyy HH:mm:ss"
+    fileprivate let dateFormatter = DateFormatter()
+    
     private let separator = ", "
     private let terminator = "\n"
     private let cURLTerminator = "\\\n"
-    private let output: (items: Any..., separator: String, terminator: String) -> Void
-    private let responseDataFormatter: ((Data) -> (Data))?
+    private let output: ([Any], String, String) -> Void
+    fileprivate let responseDataFormatter: ((Data) -> (Data))?
 
     /// If true, also logs response body data.
     public let verbose: Bool
     public let cURL: Bool
 
-    public init(verbose: Bool = false, cURL: Bool = false, output: (items: Any..., separator: String, terminator: String) -> Void = print, responseDataFormatter: ((Data) -> (Data))? = nil) {
+    public init(verbose: Bool = false,
+                cURL: Bool = false,
+                output: @escaping ([Any], String, String) -> Void = { print($0, $1, $2) },
+                responseDataFormatter: ((Data) -> (Data))? = nil) {
         self.cURL = cURL
         self.verbose = verbose
         self.output = output
@@ -24,15 +28,15 @@ public final class NetworkLoggerPlugin: PluginType {
     }
 
     public func willSendRequest(_ request: RequestType, target: TargetType) {
-        if let request = request as? CustomDebugStringConvertible where cURL {
-            output(items: request.debugDescription, separator: separator, terminator: terminator)
+        if let request = request as? CustomDebugStringConvertible, cURL == true {
+            output([request.debugDescription], separator, terminator)
             return
         }
         outputItems(logNetworkRequest(request.request))
     }
 
     public func didReceiveResponse(_ result: Result<Moya.Response, Moya.Error>, target: TargetType) {
-        if case .Success(let response) = result {
+        if case .success(let response) = result {
             outputItems(logNetworkResponse(response.response, data: response.data, target: target))
         } else {
             outputItems(logNetworkResponse(nil, data: nil, target: target))
@@ -41,9 +45,9 @@ public final class NetworkLoggerPlugin: PluginType {
 
     private func outputItems(_ items: [String]) {
         if verbose {
-            items.forEach { output(items: $0, separator: separator, terminator: terminator) }
+            items.forEach { output([$0], separator, terminator) }
         } else {
-            output(items: items, separator: separator, terminator: terminator)
+            output(items, separator, terminator)
         }
     }
 }
@@ -52,7 +56,7 @@ private extension NetworkLoggerPlugin {
 
     private var date: String {
         dateFormatter.dateFormat = dateFormatString
-        dateFormatter.locale = Locale(localeIdentifier: "en_US_POSIX")
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         return dateFormatter.string(from: Date())
     }
 
@@ -78,7 +82,7 @@ private extension NetworkLoggerPlugin {
             output += [format(loggerId, date: date, identifier: "HTTP Request Method", message: httpMethod)]
         }
 
-        if let body = request?.httpBody where verbose == true {
+        if let body = request?.httpBody, verbose == true {
             if let stringOutput = NSString(data: body, encoding: String.Encoding.utf8.rawValue) as? String {
                 output += [format(loggerId, date: date, identifier: "Request Body", message: stringOutput)]
             }
@@ -96,7 +100,7 @@ private extension NetworkLoggerPlugin {
 
         output += [format(loggerId, date: date, identifier: "Response", message: response.description)]
 
-        if let data = data where verbose == true {
+        if let data = data, verbose == true {
             if let stringData = String(data: responseDataFormatter?(data) ?? data, encoding: String.Encoding.utf8) {
                 output += [stringData]
             }

@@ -1,7 +1,7 @@
 import Foundation
 import Alamofire
 
-public typealias Manager = Alamofire.Manager
+public typealias Manager = Alamofire.SessionManager
 
 /// Choice of parameter encoding.
 public typealias ParameterEncoding = Alamofire.ParameterEncoding
@@ -18,14 +18,14 @@ public final class CancellableToken: Cancellable, CustomDebugStringConvertible {
     private var lock: DispatchSemaphore = DispatchSemaphore(value: 1)
 
     public func cancel() {
-        lock.wait(timeout: DispatchTime.distantFuture)
+        _ = lock.wait(timeout: DispatchTime.distantFuture)
         defer { lock.signal() }
         guard !canceled else { return }
         canceled = true
         cancelAction()
     }
 
-    init(action: () -> Void) {
+    init(action: @escaping () -> Void) {
         self.cancelAction = action
         self.request = nil
     }

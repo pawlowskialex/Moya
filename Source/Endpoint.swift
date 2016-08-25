@@ -63,7 +63,7 @@ public class Endpoint<Target> {
     }
 
     private func addParameters(_ parameters: [String: AnyObject]?) -> [String: AnyObject]? {
-        guard let unwrappedParameters = parameters where unwrappedParameters.isEmpty == false else {
+        guard let unwrappedParameters = parameters, unwrappedParameters.isEmpty == false else {
             return self.parameters
         }
 
@@ -75,7 +75,7 @@ public class Endpoint<Target> {
     }
 
     private func addHTTPHeaderFields(_ headers: [String: String]?) -> [String: String]? {
-        guard let unwrappedHeaders = headers where unwrappedHeaders.isEmpty == false else {
+        guard let unwrappedHeaders = headers, unwrappedHeaders.isEmpty == false else {
             return self.httpHeaderFields
         }
 
